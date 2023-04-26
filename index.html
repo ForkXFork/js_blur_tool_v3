@@ -6,9 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Pixelation Tool</title>
     <style>
+        @keyframes gradientBg {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes gradientButtons {
+            0% {
+                background-position: 100% 50%;
+            }
+            50% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #222;
+            background: linear-gradient(-45deg, #0d2236, #1e3a56, #2c5076, #1e3a56);
+            background-size: 400% 400%;
+            animation: gradientBg 15s ease infinite;
             color: #fff;
             display: flex;
             flex-direction: column;
@@ -23,20 +49,23 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            text-align: center;
         }
 
         #canvas {
             border: 2px solid #00bcd4;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
         }
 
         .buttons {
             display: flex;
-            margin-top: 20px;
         }
 
         input[type="file"], button {
-            background-color: #00bcd4;
+            background: linear-gradient(-45deg, #00bcd4, #3a539b, #5c93d5, #3a539b);
+            background-size: 400% 400%;
+            animation: gradientButtons 15s ease infinite;
             border: none;
             border-radius: 3px;
             color: #fff;
@@ -46,11 +75,11 @@
             outline: none;
             padding: 10px 15px;
             text-transform: uppercase;
-            transition: background-color 0.3s ease-in-out;
+            transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         }
 
         input[type="file"]:hover, button:hover {
-            background-color: #008ba3;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         }
     </style>
 </head>
