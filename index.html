@@ -1,96 +1,208 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Pixelation Tool</title>
+    <title>Image Blur Tool</title>
     <style>
-        @keyframes gradientBg {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        @keyframes gradientButtons {
-            0% {
-                background-position: 100% 50%;
-            }
-            50% {
-                background-position: 0% 50%;
-            }
-            100% {
-                background-position: 100% 50%;
-            }
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(-45deg, #0d2236, #1e3a56, #3a539b, #1e3a56);
-            background-size: 400% 400%;
-            animation: gradientBg 15s ease infinite;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-
-        #canvas {
-            border: 2px solid #00bcd4;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            margin-bottom: 20px;
-        }
-
-        .buttons {
-            display: flex;
-        }
-
-        input[type="file"], button {
-            background: linear-gradient(-45deg, #00bcd4, #3a539b, #5c93d5, #3a539b);
-            background-size: 400% 400%;
-            animation: gradientButtons 15s ease infinite;
-            border: none;
-            border-radius: 3px;
-            color: #fff;
-            cursor: pointer;
-            font-size: 1rem;
-            margin: 5px;
-            outline: none;
-            padding: 10px 15px;
-            text-transform: uppercase;
-            transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-        }
-
-        input[type="file"]:hover, button:hover {
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
+        canvas { border: 1px solid black; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <canvas id="canvas" width="500" height="500"></canvas>
-        <div class="buttons">
-            <input type="file" id="imageFile" accept="image/*">
-            <button id="saveButton">Save Image</button>
-        </div>
+    <input type="file" id="imageLoader" name="imageLoader"/>
+    <!-- Add a second canvas for the brush -->
+    <div class="canvasHolder" style="display: grid;">
+        <canvas id="imageCanvas" style="grid-column: 1; grid-row: 1; z-index: 4;"></canvas>
+        <canvas id="brushCanvas" style="grid-column: 1; grid-row: 1; z-index: 5; pointer-events: none;"></canvas>
     </div>
-    <script src="script.js"></script>
+    <button id="copyButton" onclick="copyButton()">Copy to Clipboard</button>
+    <button id="saveButton">Save as PNG</button>
+    <br>
+    Brush Size: <input type="range" id="brushSize" min="1" max="100" value="25">
+    Blur Intensity: <input type="range" id="blurIntensity" min="1" max="100" value="5">
+    <script>
+        const canvas = document.getElementById('imageCanvas');
+        const brushCanvas = document.getElementById('brushCanvas');
+        // Make sure the brush canvas is the same size as the image canvas
+        var ctx = canvas.getContext('2d');
+        var brushCtx = brushCanvas.getContext('2d');
+        let isDrawing = false;
+        let img = new Image();
+        let brushSize = parseInt(document.getElementById('brushSize').value);
+        let blurIntensity = parseInt(document.getElementById('blurIntensity').value);
+        let lastX, lastY;
+
+        function updateCanvasSize(height, width) {
+            canvas.width = width;
+            canvas.height = height;
+            brushCanvas.width = canvas.width
+            brushCanvas.height = canvas.height
+            ctx = canvas.getContext('2d');
+            brushCtx = brushCanvas.getContext('2d');
+        }
+
+        function handleImageUpload(event) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                img.onload = function() {
+                    updateCanvasSize(img.height, img.width)
+                    ctx.drawImage(img, 0, 0);
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(event.target.files[0]);
+        }
+
+        document.getElementById('imageLoader').addEventListener('change', handleImageUpload, false);
+        // Draw the brush
+        function drawBrush(ctx, x, y) {
+            ctx.beginPath();
+            ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.stroke();
+        }
+
+        // Apply Gaussian blur
+        function applyBlur(x, y) {
+            const radius = brushSize;
+            const diameter = radius * 2;
+            const startX = Math.max(x - radius, 0);
+            const startY = Math.max(y - radius, 0);
+
+            // Get the image data for the square area around the circle
+            const areaToBlur = ctx.getImageData(startX, startY, diameter, diameter);
+
+            // Apply Gaussian blur only within the circle
+            const blurredArea = gaussianBlur(areaToBlur, radius, x - startX, y - startY, blurIntensity);
+
+            // Draw the blurred area back onto the canvas
+            ctx.putImageData(blurredArea, startX, startY);
+        }
+
+        function gaussianBlur(imageData, radius, centerX, centerY, blurIntensity) {
+            const width = imageData.width;
+            const height = imageData.height;
+            const blurredImage = new ImageData(width, height);
+
+            // Adjust sigma based on the blurIntensity
+            const sigma = radius * (blurIntensity / 100);
+
+            for (let dy = 0; dy < height; dy++) {
+                for (let dx = 0; dx < width; dx++) {
+                    if (Math.sqrt(Math.pow(dx - centerX, 2) + Math.pow(dy - centerY, 2)) <= radius) {
+                        let totalR = 0, totalG = 0, totalB = 0, totalA = 0, totalWeight = 0;
+
+                        for (let ny = -radius; ny <= radius; ny++) {
+                            for (let nx = -radius; nx <= radius; nx++) {
+                                const currentX = dx + nx;
+                                const currentY = dy + ny;
+
+                                if (currentX >= 0 && currentX < width && currentY >= 0 && currentY < height) {
+                                    const weight = Math.exp(-(nx * nx + ny * ny) / (2 * sigma * sigma));
+                                    const pos = (currentY * width + currentX) * 4;
+
+                                    totalR += imageData.data[pos] * weight;
+                                    totalG += imageData.data[pos + 1] * weight;
+                                    totalB += imageData.data[pos + 2] * weight;
+                                    totalA += imageData.data[pos + 3] * weight;
+                                    totalWeight += weight;
+                                }
+                            }
+                        }
+
+                        const destPos = (dy * width + dx) * 4;
+                        blurredImage.data[destPos] = totalR / totalWeight;
+                        blurredImage.data[destPos + 1] = totalG / totalWeight;
+                        blurredImage.data[destPos + 2] = totalB / totalWeight;
+                        blurredImage.data[destPos + 3] = totalA / totalWeight;
+                    } else {
+                        const pixelIndex = (dy * width + dx) * 4;
+                        blurredImage.data[pixelIndex] = imageData.data[pixelIndex];     // Red
+                        blurredImage.data[pixelIndex + 1] = imageData.data[pixelIndex + 1]; // Green
+                        blurredImage.data[pixelIndex + 2] = imageData.data[pixelIndex + 2]; // Blue
+                        blurredImage.data[pixelIndex + 3] = imageData.data[pixelIndex + 3]; // Alpha
+                    }
+                }
+            }
+
+            return blurredImage;
+        }
+
+
+
+
+        canvas.addEventListener('mousemove', function(e) {
+            const x = e.offsetX;
+            const y = e.offsetY;
+
+            if (isDrawing) {
+                applyBlur(x, y);
+            }
+
+            // Clear and redraw the brush on the brush canvas
+            brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
+            drawBrush(brushCtx, x, y); // Update drawBrush to take a context as a parameter
+        });
+
+        canvas.addEventListener('mousedown', function(e) {
+            isDrawing = true;
+        });
+
+        canvas.addEventListener('mouseup', function() {
+            isDrawing = false;
+        });
+        window.addEventListener('paste', function(e) {
+            if (e.clipboardData) {
+                const items = e.clipboardData.items;
+                if (items) {
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf("image") !== -1) {
+                            const blob = items[i].getAsFile();
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                img.onload = function() {
+                                    updateCanvasSize(img.height, img.width)
+                                    ctx.drawImage(img, 0, 0);
+                                }
+                                img.src = event.target.result;
+                            };
+                            reader.readAsDataURL(blob);
+                        }
+                    }
+                }
+            }
+        });
+
+        document.getElementById('brushSize').addEventListener('input', function() {
+            brushSize = parseInt(this.value);
+        });
+
+        document.getElementById('blurIntensity').addEventListener('input', function() {
+            blurIntensity = parseInt(this.value);
+        });
+
+        document.getElementById('copyButton').addEventListener('click', function() {
+            // Create a new canvas to combine the image and the brush effect
+            var combinedCanvas = document.createElement('canvas');
+            combinedCanvas.width = canvas.width;
+            combinedCanvas.height = canvas.height;
+            var combinedCtx = combinedCanvas.getContext('2d');
+
+            // Draw the original image and the brush effect onto the combined canvas
+            combinedCtx.drawImage(canvas, 0, 0); // Draw the main image
+            combinedCtx.drawImage(brushCanvas, 0, 0); // Draw the brush effect
+
+            // Copy the combined canvas to clipboard
+            combinedCanvas.toBlob(function(blob) {
+                const item = new ClipboardItem({ "image/png": blob });
+                navigator.clipboard.write([item]);
+            });
+        });
+
+        document.getElementById('saveButton').addEventListener('click', function() {
+            const link = document.createElement('a');
+            link.download = 'blurred-image.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    </script>
 </body>
 </html>
