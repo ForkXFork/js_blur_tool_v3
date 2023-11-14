@@ -3,7 +3,42 @@
 <head>
     <title>Image Blur Tool</title>
     <style>
-        canvas { border: 1px solid black; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1A1A1D;
+            color: #C5C6C7;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        input[type="file"] {
+            border: 1px solid #4E4E50;
+            border-radius: 5px;
+            padding: 5px 10px;
+            background-color: #0B0C10;
+            color: #C5C6C7;
+            margin-top: 20px;
+        }
+
+        input[type="file"]:hover {
+            background-color: #1F2833;
+            cursor: pointer;
+        }
+
+        /* Styling the canvases with neat borders and shadows */
+        canvas {
+            border: 1px solid #66FCF1;
+            box-shadow: 0 8px 16px 0 rgba(102, 252, 241, 0.2);
+            margin-top: 20px;
+        }
+
+        /* Making the layout responsive */
+        .canvasHolder {
+            display: grid;
+            justify-content: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
