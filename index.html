@@ -59,6 +59,7 @@
         // Make sure the brush canvas is the same size as the image canvas
         var ctx = canvas.getContext('2d');
         var brushCtx = brushCanvas.getContext('2d');
+        brushCtx.lineWidth = 2;
         let isDrawing = false;
         let img = new Image();
         let brushSize = parseInt(document.getElementById('brushSize').value);
@@ -88,10 +89,10 @@
 
         document.getElementById('imageLoader').addEventListener('change', handleImageUpload, false);
         // Draw the brush
-        function drawBrush(ctx, x, y) {
+        function drawBrush(ctx, x, y, color) {
             ctx.beginPath();
             ctx.arc(x, y, brushSize, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.strokeStyle = color;
             ctx.stroke();
         }
 
@@ -174,7 +175,9 @@
 
             // Clear and redraw the brush on the brush canvas
             brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
-            drawBrush(brushCtx, x, y); // Update drawBrush to take a context as a parameter
+            const pixel = ctx.getImageData(x, y, 1, 1).data;
+            const invertedColor = `rgba(${255 - pixel[0]}, ${255 - pixel[1]}, ${255 - pixel[2]}, 0.5)`;
+            drawBrush(brushCtx, x, y, invertedColor); // Update drawBrush to take a context as a parameter
         });
 
         canvas.addEventListener('mousedown', function(e) {
